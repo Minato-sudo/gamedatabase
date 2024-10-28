@@ -1,0 +1,27 @@
+
+#include <ctime>   
+
+class GamersDBMS {
+private:
+    BinarySearchTree playerTree;
+    BinarySearchTree gameTree;
+    int seed;
+
+    bool shouldSkipLine() {
+        // Using last 2 digits of roll number * 10 + 100
+        int lastTwoDigits = seed % 100;
+        int threshold = lastTwoDigits * 10 + 100;
+        return (rand() % 1000) < threshold; 
+    }
+
+public:
+    GamersDBMS(int rollNumber) : seed(rollNumber) {
+        srand(rollNumber); 
+    }
+
+    void generateRandomPosition(int rows, int cols, int& randomRow, int& randomCol) {
+        randomRow = rand() % rows; 
+        randomCol = rand() % cols;  
+    }
+
+};
