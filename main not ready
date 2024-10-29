@@ -1,0 +1,267 @@
+#include <iostream>
+#include <ctime>
+#include <string>
+
+using namespace std;
+
+class MyString {
+private:
+    char* data;
+    int length;
+
+public:
+    MyString() : data(nullptr), length(0) {}
+
+    MyString(const char* str) {
+        length = 0;
+        while (str[length] != '\0') length++;
+        data = new char[length + 1];
+        for (int i = 0; i < length; i++) {
+            data[i] = str[i];
+        }
+        data[length] = '\0';
+    }
+
+    ~MyString() {
+        delete[] data;
+    }
+
+    const char* c_str() const { return data; }
+    int getLength() const { return length; }
+};
+
+// A Node for linked list that holds game IDs
+class GameListNode {
+public:
+    int gameId;
+    GameListNode* next;
+
+    GameListNode(int id) : gameId(id), next(nullptr) {}
+};
+
+// Linked list class to manage game IDs
+class GamesList {
+private:
+    GameListNode* head;
+
+public:
+    GamesList() : head(nullptr) {}
+
+    void add(int gameId) {
+        GameListNode* newNode = new GameListNode(gameId);
+        newNode->next = head;
+        head = newNode;
+    }
+
+    bool contains(int gameId) const {
+        GameListNode* current = head;
+        while (current) {
+            if (current->gameId == gameId) return true;
+            current = current->next;
+        }
+        return false;
+    }
+
+    void display() const {
+        GameListNode* current = head;
+        while (current) {
+            cout << current->gameId << " ";
+            current = current->next;
+        }
+    }
+
+    ~GamesList() {
+        GameListNode* current = head;
+        while (current) {
+            GameListNode* next = current->next;
+            delete current;
+            current = next;
+        }
+    }
+};
+
+class Node {
+public:
+    int id;
+    Node* left;
+    Node* right;
+    int layer;
+
+    Node(int id) : id(id), left(nullptr), right(nullptr), layer(1) {}
+    virtual ~Node() = default;
+    virtual void display() = 0;
+    virtual Node* clone() = 0;
+};
+
+class PlayerNode : public Node {
+public:
+    MyString name;
+    GamesList gamesPlayed;
+
+    PlayerNode(int id, const char* playerName) : Node(id), name(playerName) {}
+
+    void display() override {
+        cout << "Player ID: " << id << ", Name: " << name.c_str() << ", Games Played IDs: ";
+        gamesPlayed.display();
+        cout << endl;
+    }
+
+    Node* clone() override {
+        PlayerNode* clonedNode = new PlayerNode(id, name.c_str());
+        return clonedNode;
+    }
+};
+
+class GameNode : public Node {
+public:
+    MyString title;
+
+    GameNode(int id, const char* gameTitle) : Node(id), title(gameTitle) {}
+
+    void display() override {
+        cout << "Game ID: " << id << ", Title: " << title.c_str() << endl;
+    }
+
+    Node* clone() override {
+        return new GameNode(id, title.c_str());
+    }
+};
+
+class BinarySearchTree {
+private:
+    Node* root;
+
+    Node* insertHelper(Node* node, Node* newNode) {
+        if (!node) return newNode;
+
+        if (newNode->id < node->id) node->left = insertHelper(node->left, newNode);
+        else node->right = insertHelper(node->right, newNode);
+
+        return node;
+    }
+
+    Node* searchHelper(Node* node, int id) const {
+        if (!node || node->id == id) return node;
+        if (id < node->id) return searchHelper(node->left, id);
+        return searchHelper(node->right, id);
+    }
+
+    void deleteTree(Node* node) {
+        if (!node) return;
+        deleteTree(node->left);
+        deleteTree(node->right);
+        delete node;
+    }
+
+public:
+    BinarySearchTree() : root(nullptr) {}
+
+    ~BinarySearchTree() { deleteTree(root); }
+
+    void insert(Node* newNode) { root = insertHelper(root, newNode); }
+
+    Node* search(int id) const { return searchHelper(root, id); }
+
+    void displayInOrder(Node* node) const {
+        if (!node) return;
+        displayInOrder(node->left);
+        node->display();
+        displayInOrder(node->right);
+    }
+
+    Node* getRoot() const { return root; }
+};
+
+class GamersDBMS {
+private:
+    BinarySearchTree playerTree;
+    BinarySearchTree gameTree;
+
+public:
+    GamersDBMS() { srand(time(0)); }
+
+    void addPlayer(int playerId, const char* playerName) {
+        if (playerTree.search(playerId)) {
+            cout << "Player ID already exists!" << endl;
+            return;
+        }
+        PlayerNode* playerNode = new PlayerNode(playerId, playerName);
+        playerTree.insert(playerNode);
+        cout << "Player added: ";
+        playerNode->display();
+    }
+
+    void addGame(int gameId, const char* gameTitle) {
+        if (gameTree.search(gameId)) {
+            cout << "Game ID already exists!" << endl;
+            return;
+        }
+        GameNode* gameNode = new GameNode(gameId, gameTitle);
+        gameTree.insert(gameNode);
+        cout << "Game added: ";
+        gameNode->display();
+    }
+
+    void assignGameToPlayer(int playerId, int gameId) {
+        PlayerNode* player = static_cast<PlayerNode*>(playerTree.search(playerId));
+        if (!player) {
+            cout << "Player not found" << endl;
+            return;
+        }
+        if (!gameTree.search(gameId)) {
+            cout << "Game ID not found" << endl;
+            return;
+        }
+        player->gamesPlayed.add(gameId);
+        cout << "Game ID " << gameId << " assigned to Player ID " << playerId << endl;
+    }
+
+    void showPlayers() const {
+        cout << "All Players:" << endl;
+        playerTree.displayInOrder(playerTree.getRoot());
+    }
+
+    void showGames() const {
+        cout << "All Games:" << endl;
+        gameTree.displayInOrder(gameTree.getRoot());
+    }
+
+    void showPlayerDetails(int playerId) const {
+        PlayerNode* player = static_cast<PlayerNode*>(playerTree.search(playerId));
+        if (!player) {
+            cout << "Player not found" << endl;
+            return;
+        }
+        player->display();
+    }
+
+    void showGameDetails(int gameId) const {
+        GameNode* game = static_cast<GameNode*>(gameTree.search(gameId));
+        if (!game) {
+            cout << "Game not found" << endl;
+            return;
+        }
+        game->display();
+    }
+};
+
+int main() {
+    GamersDBMS dbms;
+
+    dbms.addPlayer(101, "Alice");
+    dbms.addPlayer(102, "Bob");
+    dbms.addGame(201, "Chess");
+    dbms.addGame(202, "Football");
+
+    cout << endl;
+    dbms.showPlayers();
+    dbms.showGames();
+
+    dbms.assignGameToPlayer(101, 201);
+    dbms.assignGameToPlayer(101, 202);
+
+    cout << "\nPlayer Details for ID 101:" << endl;
+    dbms.showPlayerDetails(101);
+
+    return 0;
+}
