@@ -1,0 +1,152 @@
+class MyString {
+private:
+    char* data;
+    int length;
+    
+public:
+    MyString() : data(nullptr), length(0) {}
+    
+    MyString(const char* str) {
+        length = 0;
+        while (str[length] != '\0') length++;
+        data = new char[length + 1];
+        for (int i = 0; i < length; i++) {
+            data[i] = str[i];
+        }
+        data[length] = '\0';
+    }
+    
+    MyString(const MyString& other) {
+        length = other.length;
+        data = new char[length + 1];
+        for (int i = 0; i < length; i++) {
+            data[i] = other.data[i];
+        }
+        data[length] = '\0';
+    }
+    
+    MyString& operator=(const MyString& other) {
+        if (this != &other) {
+            delete[] data;
+            length = other.length;
+            data = new char[length + 1];
+            for (int i = 0; i < length; i++) {
+                data[i] = other.data[i];
+            }
+            data[length] = '\0';
+        }
+        return *this;
+    }
+    
+    ~MyString() {
+        delete[] data;
+    }
+    
+    const char* c_str() const { return data; }
+    int getLength() const { return length; }
+};
+
+class GamesList {
+private:
+    struct GameNode {
+        int gameId;
+        float score;
+        GameNode* next;
+        GameNode(int id, float s) : gameId(id), score(s), next(nullptr) {}
+    };
+    
+    GameNode* head;
+    int size;
+    
+public:
+    GamesList() : head(nullptr), size(0) {}
+    
+    void add(int gameId, float score) {
+        GameNode* newNode = new GameNode(gameId, score);
+        newNode->next = head;
+        head = newNode;
+        size++;
+    }
+    
+    bool contains(int gameId) const {
+        GameNode* current = head;
+        while (current) {
+            if (current->gameId == gameId) return true;
+            current = current->next;
+        }
+        return false;
+    }
+    
+    int getSize() const { return size; }
+    
+    void displayGames() const {
+        GameNode* current = head;
+        while (current) {
+            cout << "Game ID: " << current->gameId 
+                 << ", Score: " << current->score << endl;
+            current = current->next;
+        }
+    }
+    
+    ~GamesList() {
+        while (head) {
+            GameNode* temp = head;
+            head = head->next;
+            delete temp;
+        }
+    }
+};
+
+class Node {
+public:
+    int id;
+    Node* left;
+    Node* right;
+    int layer;
+    
+    Node(int id) : id(id), left(nullptr), right(nullptr), layer(1) {}
+    virtual ~Node() = default;
+    virtual void display() = 0;
+};
+
+class PlayerNode : public Node {
+public:
+    MyString name;
+    MyString email;
+    MyString phoneNumber;
+    MyString password;
+    GamesList gamesPlayed;
+    
+    PlayerNode(int id, const char* playerName, const char* playerEmail, 
+               const char* phone, const char* pwd) 
+        : Node(id), name(playerName), email(playerEmail), 
+          phoneNumber(phone), password(pwd) {}
+    
+    void display() override {
+        cout << "Player ID: " << id << "\nName: " << name.c_str() 
+             << "\nEmail: " << email.c_str() 
+             << "\nPhone: " << phoneNumber.c_str() << endl;
+    }
+};
+
+class GameNode : public Node {
+public:
+    MyString title;
+    MyString publisher;
+    MyString developer;
+    float rating;
+    int downloads;
+    
+    GameNode(int id, const char* gameTitle, const char* pub, 
+             const char* dev, float r, int d) 
+        : Node(id), title(gameTitle), publisher(pub), 
+          developer(dev), rating(r), downloads(d) {}
+    
+    void display() override {
+        cout << "Game ID: " << id << "\nTitle: " << title.c_str() 
+             << "\nPublisher: " << publisher.c_str()
+             << "\nDeveloper: " << developer.c_str()
+             << "\nRating: " << rating 
+             << "\nDownloads: " << downloads << endl;
+    }
+};
