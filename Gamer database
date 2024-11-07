@@ -1,0 +1,725 @@
+#include <iostream>
+#include <cstring>
+#include <ctime>
+
+using namespace std;
+
+class MyString {
+private:
+    char* data;
+    int length;
+
+public:
+    MyString() : data(nullptr), length(0) {}
+
+    MyString(const char* str) {
+        length = strlen(str);
+        data = new char[length + 1];
+        strcpy(data, str);
+    }
+
+    MyString(const MyString& other) {
+        length = other.length;
+        data = new char[length + 1];
+        strcpy(data, other.data);
+    }
+
+    MyString& operator=(const MyString& other) {
+        if (this != &other) {
+            delete[] data;
+            length = other.length;
+            data = new char[length + 1];
+            strcpy(data, other.data);
+        }
+        return *this;
+    }
+
+    ~MyString() {
+        delete[] data;
+    }
+
+    const char* c_str() const { return data; }
+    int getLength() const { return length; }
+};
+class Node {
+public:
+    int id;
+    Node* left;
+    Node* right;
+    int layer;
+
+    Node(int id) : id(id), left(nullptr), right(nullptr), layer(1) {}
+    virtual ~Node() = default;
+    virtual void display() = 0;
+};
+class GameNode : public Node {
+public:
+    MyString title;
+    MyString publisher;
+    MyString developer;
+    float rating;
+    int downloads;
+
+    GameNode(int id, const char* gameTitle, const char* pub,
+             const char* dev, float r, int d)
+        : Node(id), title(gameTitle), publisher(pub),
+          developer(dev), rating(r), downloads(d) {}
+
+    void display() override {
+        cout << "Game ID: " << id << "\nTitle: " << title.c_str()
+             << "\nPublisher: " << publisher.c_str()
+             << "\nDeveloper: " << developer.c_str()
+             << "\nRating: " << rating
+             << "\nDownloads: " << downloads << endl;
+    }
+};
+class GamesList {
+
+public:
+    GamesList() : head(nullptr), size(0) {}
+    struct InnerGameNode { 
+        int gameId;
+        float score;
+        InnerGameNode* next;
+        InnerGameNode(int id, float s) : gameId(id), score(s), next(nullptr) {}
+    };
+
+    void add(int gameId, float score) {
+        InnerGameNode* newNode = new InnerGameNode(gameId, score);
+        newNode->next = head;
+        head = newNode;
+        size++;
+    }
+
+    bool contains(int gameId) const {
+        InnerGameNode* current = head;
+        while (current) {
+            if (current->gameId == gameId) return true;
+            current = current->next;
+        }
+        return false;
+    }
+
+    int getSize() const { return size; }
+
+    void displayGames() const {
+        InnerGameNode* current = head;
+        while (current) {
+            cout << "Game ID: " << current->gameId 
+                 << ", Score: " << current->score << endl;
+            current = current->next;
+        }
+    }
+
+   
+    InnerGameNode* getHead() const { return head; }
+
+    ~GamesList() {
+        while (head) {
+            InnerGameNode* temp = head;
+            head = head->next;
+            delete temp;
+        }
+    }
+    private:
+
+    InnerGameNode* head;  
+    int size;
+
+};
+
+
+
+class PlayerNode : public Node {
+public:
+    MyString name;
+    MyString email;
+    MyString phoneNumber;
+    MyString password;
+    GamesList gamesPlayed;
+
+    PlayerNode(int id, const char* playerName, const char* playerEmail,
+               const char* phone, const char* pwd)
+        : Node(id), name(playerName), email(playerEmail),
+          phoneNumber(phone), password(pwd) {}
+
+    void display() override {
+        cout << "Player ID: " << id << "\nName: " << name.c_str()
+             << "\nEmail: " << email.c_str()
+             << "\nPhone: " << phoneNumber.c_str() << endl;
+    }
+};
+
+
+class BinarySearchTree {
+private:
+       Node* root;
+
+    Node* insertHelper(Node* root, Node* newNode) {
+        if (!root) return newNode;
+
+        if (newNode->id < root->id)
+            root->left = insertHelper(root->left, newNode);
+        else if (newNode->id > root->id)
+            root->right = insertHelper(root->right, newNode);
+        else {
+            cout<<"Error duplicate id is found :"<<newNode->id<<"so deleting it:"<<endl;
+            
+            delete newNode;
+            return root;
+        }
+
+        return root;
+    }
+
+    void updateLayer(Node* node, int currentLayer) {
+        if (!node) return;
+        node->layer = currentLayer;
+        updateLayer(node->left, currentLayer + 1);
+        updateLayer(node->right, currentLayer + 1);
+    }
+
+    Node* findNode(Node* current, int id) const {
+        if (!current || current->id == id) return current;
+        if (id < current->id) return findNode(current->left, id);
+        return findNode(current->right, id);
+    }
+
+    void inorderTraversalHelper(Node* node, void (*callback)(Node*, void*), void* data) const {
+        if (!node) return;
+        inorderTraversalHelper(node->left, callback, data);
+        callback(node, data);
+        inorderTraversalHelper(node->right, callback, data);
+    }
+
+    void deleteTree(Node* node) {
+        if (!node) return;
+        deleteTree(node->left);
+        deleteTree(node->right);
+        delete node;
+    }
+
+public:
+    BinarySearchTree() : root(nullptr) {}
+
+    ~BinarySearchTree() {
+        deleteTree(root);
+    }
+
+    void insert(Node* newNode) {
+        root = insertHelper(root, newNode);
+        updateLayer(root, 1);
+    }
+
+    Node* search(int id) const {
+        return findNode(root, id);
+    }
+
+    void inorderTraversal(void (*callback)(Node*, void*), void* data) const {
+        inorderTraversalHelper(root, callback, data);
+    }
+
+    int getLayer(int id) const {
+        Node* node = findNode(root, id);
+        return node ? node->layer : -1;
+    }
+
+    void deleteNode(int id) {
+     
+        Node* nodeToDelete = findNode(root, id);
+    if (!nodeToDelete) {
+        cout << "Node with ID " << id << " not found." << endl;
+        return;
+    }
+
+
+    if (!nodeToDelete->left && !nodeToDelete->right) {
+      
+        if (nodeToDelete == root) {
+            root = nullptr;
+        } else {
+            Node* parent = findParent(root, nodeToDelete);
+            if (parent->left == nodeToDelete) {
+                parent->left = nullptr;
+            } else {
+                parent->right = nullptr;
+            }
+        }
+        delete nodeToDelete;
+    } else if (!nodeToDelete->left) {
+       
+        replaceNode(root, nodeToDelete, nodeToDelete->right);
+    } else if (!nodeToDelete->right) {
+       
+        replaceNode(root, nodeToDelete, nodeToDelete->left);
+    } else {
+       
+        Node* successor = findMinNode(nodeToDelete->right);
+        int successorData = successor->id;
+        deleteNode(successorData);
+        nodeToDelete->id = successorData;
+    }
+    }
+void preorderTraversalHelper(Node* node, FILE* fp) {
+    if (!node) return;
+
+
+    fprintf(fp, "%d", node->id);
+
+ 
+    if (PlayerNode* playerNode = dynamic_cast<PlayerNode*>(node)) {
+        fprintf(fp, ",%s,%s,%s,%s", playerNode->name.c_str(), playerNode->phoneNumber.c_str(),
+                playerNode->email.c_str(), playerNode->password.c_str());
+
+        GamesList::InnerGameNode* current = playerNode->gamesPlayed.getHead();
+        while (current) {
+            fprintf(fp, ",%d,%.2f", current->gameId, current->score);
+            current = current->next;
+        }
+    } else if (GameNode* gameNode = dynamic_cast<GameNode*>(node)) {
+        fprintf(fp, ",%s,%s,%s,%.2f,%d", gameNode->title.c_str(), gameNode->publisher.c_str(),
+                gameNode->developer.c_str(), gameNode->rating, gameNode->downloads);
+    }
+
+    fprintf(fp, "\n");
+    preorderTraversalHelper(node->left, fp);
+    preorderTraversalHelper(node->right, fp);
+}
+    void saveToFile(const char* filename) {
+        
+         FILE* fp = fopen(filename, "w");
+    if (!fp) {
+        cout << "Error opening file: " << filename << endl;
+        return;
+    }
+
+    preorderTraversalHelper(root, fp);
+    fclose(fp);
+    }
+void showNLayersHelper(Node* node, int currentLayer, int targetLayer) {
+    if (!node) return;
+
+    if (currentLayer <= targetLayer) {
+        node->display();
+        cout << "Layer: " << currentLayer << endl;
+    }
+
+    if (currentLayer < targetLayer) {
+        showNLayersHelper(node->left, currentLayer + 1, targetLayer);
+        showNLayersHelper(node->right, currentLayer + 1, targetLayer);
+    } else {
+        cout << "Layer Limit was Reached, can't go further" << endl;
+    }
+}
+
+    void showNLayers(int n) {
+        
+    showNLayersHelper(root, 1, n);
+
+        
+    }
+void showPathHelper(Node* node, int id, Node* parent) {
+    if (!node) return;
+
+    if (node->id == id) {
+        if (parent) {
+            cout << parent->id << " -> ";
+        }
+        cout << node->id << endl;
+        return;
+    }
+
+    if (id < node->id) {
+        cout << node->id << " -> ";
+        showPathHelper(node->left, id, node);
+    } else {
+        cout << node->id << " -> ";
+        showPathHelper(node->right, id, node);
+    }
+}
+    void showPath(int id) {
+        
+    showPathHelper(root, id, nullptr);
+
+      
+    }
+
+
+    void editEntry(int id) {
+    Node* nodeToEdit = findNode(root, id);
+    if (!nodeToEdit) {
+        cout << "Entry with ID " << id << " not found." << endl;
+        return;
+    }
+
+    if (dynamic_cast<PlayerNode*>(nodeToEdit)) {
+      
+        PlayerNode* playerNode = static_cast<PlayerNode*>(nodeToEdit);
+        cout << "Current player details:" << endl;
+        playerNode->display();
+
+        char newName[1024], newPhone[1024], newEmail[1024], newPassword[1024];
+        cout << "Enter new name: ";
+        cin.getline(newName, 1024);
+        cout << "Enter new phone: ";
+        cin.getline(newPhone, 1024);
+        cout << "Enter new email: ";
+        cin.getline(newEmail, 1024);
+        cout << "Enter new password: ";
+        cin.getline(newPassword, 1024);
+
+        playerNode->name = newName;
+        playerNode->phoneNumber = newPhone;
+        playerNode->email = newEmail;
+        playerNode->password = newPassword;
+    } else if (dynamic_cast<GameNode*>(nodeToEdit)) {
+     
+        GameNode* gameNode = static_cast<GameNode*>(nodeToEdit);
+        cout << "Current game details:" << endl;
+        gameNode->display();
+
+        char newTitle[1024], newPublisher[1024], newDeveloper[1024];
+        float newRating;
+        int newDownloads;
+        cout << "Enter new title: ";
+        cin.getline(newTitle, 1024);
+        cout << "Enter new publisher: ";
+        cin.getline(newPublisher, 1024);
+        cout << "Enter new developer: ";
+        cin.getline(newDeveloper, 1024);
+        cout << "Enter new rating: ";
+        cin >> newRating;
+        cout << "Enter new downloads: ";
+        cin >> newDownloads;
+
+        gameNode->title = newTitle;
+        gameNode->publisher = newPublisher;
+        gameNode->developer = newDeveloper;
+        gameNode->rating = newRating;
+        gameNode->downloads = newDownloads;
+    }
+    deleteNode(id);
+    insert(nodeToEdit);
+}
+Node* findParent(Node* current, Node* child) {
+    if (!current || current->left == child || current->right == child) {
+        return current;
+    }
+
+    if (child->id < current->id) {
+        return findParent(current->left, child);
+    } else {
+        return findParent(current->right, child);
+    }
+}
+void replaceNode(Node*& root, Node* nodeToReplace, Node* newNode) {
+    if (nodeToReplace == root) {
+        root = newNode;
+    } else {
+        Node* parent = findParent(root, nodeToReplace);
+        if (parent->left == nodeToReplace) {
+            parent->left = newNode;
+        } else {
+            parent->right = newNode;
+        }
+    }
+    delete nodeToReplace;
+}
+Node* findMinNode(Node* node) {
+    while (node->left) {
+        node = node->left;
+    }
+    return node;
+}
+
+};
+
+class GamersDBMS {
+private:
+    BinarySearchTree playerTree;
+    BinarySearchTree gameTree;
+    int seed;
+
+    struct PlayerInfo {
+        PlayerNode* player;
+        PlayerInfo* next;
+        PlayerInfo(PlayerNode* p) : player(p), next(nullptr) {}
+    };
+
+    bool shouldSkipLine() {
+        int lastTwoDigits = seed % 100;
+        int threshold = lastTwoDigits * 10 + 100;
+        return (rand() % 1000) < threshold;
+    }
+
+    static void processPlayer(Node* node, void* data) {
+        PlayerInfo** headPtr = (PlayerInfo**)data;
+        PlayerNode* player = static_cast<PlayerNode*>(node);
+        PlayerInfo* info = new PlayerInfo(player);
+
+        if (!*headPtr || player->gamesPlayed.getSize() > (*headPtr)->player->gamesPlayed.getSize()) {
+            info->next = *headPtr;
+            *headPtr = info;
+        } else {
+            PlayerInfo* current = *headPtr;
+            while (current->next && current->next->player->gamesPlayed.getSize() >= player->gamesPlayed.getSize()) {
+                current = current->next;
+            }
+            info->next = current->next;
+            current->next = info;
+        }
+    }
+
+    void parseGameLine(const char* line, GameNode** node) {
+        int id;
+        char title[1024], publisher[1024], developer[1024];
+        float rating;
+        int downloads;
+
+        int numScanned = sscanf(line, "%d,%1024[^,],%1024[^,],%1024[^,],%f,%d",
+                               &id, title, publisher, developer, &rating, &downloads);
+
+        if (numScanned == 6) {
+            *node = new GameNode(id, title, publisher, developer, rating, downloads);
+        } else {
+            *node = nullptr;
+        }
+    }
+
+    void parsePlayerLine(const char* line, PlayerNode** node) {
+        int id;
+        char name[1024], phone[1024], email[1024], password[1024];
+
+        int numScanned = sscanf(line, "%d,%1024[^,],%1024[^,],%1024[^,],%1024[^,]",
+                               &id, name, phone, email, password);
+
+        if (numScanned == 5) {
+            *node = new PlayerNode(id, name, email, phone, password);
+
+            
+            const char* ptr = strchr(line, ',') + 1;
+            while (ptr && *ptr != '\0') {
+                int gameId;
+                float score;
+                int numItems = sscanf(ptr, "%d,%f", &gameId, &score);
+                if (numItems == 2) {
+                    (*node)->gamesPlayed.add(gameId, score);
+                }
+                ptr = strchr(ptr + 1, ',');
+                if (ptr) ptr++;
+            }
+        } else {
+            *node = nullptr;
+        }
+    }
+
+public:
+    GamersDBMS(int rollNumber) : seed(rollNumber) {
+        srand(seed);
+    }
+
+    void showTopPlayers(int N) {
+        PlayerInfo* head = nullptr;
+        playerTree.inorderTraversal(processPlayer, &head);
+
+        PlayerInfo* current = head;
+        int count = 0;
+        while (current && count < N) {
+            current->player->display();
+            cout << "Games played: " << current->player->gamesPlayed.getSize() << endl;
+            current = current->next;
+            count++;
+        }
+        while (head) {
+            PlayerInfo* temp = head;
+            head = head->next;
+            delete temp;
+        }
+    }
+
+    void loadData(const char* playersFile, const char* gamesFile) {
+        FILE* fp = fopen(gamesFile, "r");
+        if (!fp) {
+            cout << "Error opening games file" << endl;
+            return;
+        }
+
+        char line[1024];
+        while (fgets(line, sizeof(line), fp)) {
+            line[strcspn(line, "\n")] = 0;
+            GameNode* gameNode = nullptr;
+            parseGameLine(line, &gameNode);
+            if (gameNode) gameTree.insert(gameNode);
+        }
+        fclose(fp);
+
+        fp = fopen(playersFile, "r");
+        if (!fp) {
+            cout << "Error opening players file" << endl;
+            return;
+        }
+
+        while (fgets(line, sizeof(line), fp)) {
+            if (shouldSkipLine()) continue;
+
+            line[strcspn(line, "\n")] = 0;
+            PlayerNode* playerNode = nullptr;
+            parsePlayerLine(line, &playerNode);
+            if (playerNode) playerTree.insert(playerNode);
+        }
+        fclose(fp);
+    }
+
+    void showPlayerDetails(int playerId) {
+        PlayerNode* player = static_cast<PlayerNode*>(playerTree.search(playerId));
+        if (!player) {
+            cout << "Player not found" << endl;
+            return;
+        }
+
+        player->display();
+        cout << "\nGames played:\n";
+        player->gamesPlayed.displayGames();
+    }
+
+    bool hasPlayed(int playerId, int gameId) {
+        PlayerNode* player = static_cast<PlayerNode*>(playerTree.search(playerId));
+        return player ? player->gamesPlayed.contains(gameId) : false;
+    }
+
+    void showLayerNumber(int id) {
+        int playerLayer = playerTree.getLayer(id);
+        if (playerLayer != -1) {
+            cout << "Player is at layer " << playerLayer << endl;
+            return;
+        }
+
+        int gameLayer = gameTree.getLayer(id);
+        if (gameLayer != -1) {
+            cout << "Game is at layer " << gameLayer << endl;
+            return;
+        }
+
+        cout << "ID not found" << endl;
+    }
+
+    void saveData(const char* filename) {
+        playerTree.saveToFile(filename);
+    }
+
+    void deleteEntry(int id) {
+        playerTree.deleteNode(id);
+        gameTree.deleteNode(id);
+    }
+
+    void showNLayers(int n) {
+        playerTree.showNLayers(n);
+        gameTree.showNLayers(n);
+    }
+
+    void showPath(int id) {
+        playerTree.showPath(id);
+        gameTree.showPath(id);
+    }
+
+    void editEntry(int id) {
+        playerTree.editEntry(id);
+        gameTree.editEntry(id);
+    }
+};
+
+int main() {
+    GamersDBMS dbms(232548);
+
+    dbms.loadData("Players.txt", "Games.txt");
+
+    int choice;
+    do {
+        cout << "\nGamers Database Manager\n";
+        cout << "1. Show Top N Players\n";
+        cout << "2. Show Player Details\n";
+        cout << "3. Check if Player has played Game\n";
+        cout << "4. Show Layer Number\n";
+        cout << "5. Save Data\n";
+        cout << "6. Delete Entry\n";
+        cout << "7. Show N Layers\n";
+        cout << "8. Show Path\n";
+        cout << "9. Edit Entry\n";
+        cout << "0. Exit\n";
+        cout << "Enter choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: {
+                int n;
+                cout << "Enter N: ";
+                cin >> n;
+                dbms.showTopPlayers(n);
+                break;
+            }
+            case 2: {
+                int playerId;
+                cout << "Enter Player ID: ";
+                cin >> playerId;
+                dbms.showPlayerDetails(playerId);
+                break;
+            }
+            case 3: {
+                int playerId, gameId;
+                cout << "Enter Player ID: ";
+                cin >> playerId;
+                cout << "Enter Game ID: ";
+                cin >> gameId;
+                if (dbms.hasPlayed(playerId, gameId))
+                    cout << "Player has played this game\n";
+                else
+                    cout << "Player has not played this game\n";
+                break;
+            }
+            case 4: {
+                int id;
+                cout << "Enter ID: ";
+                cin >> id;
+                dbms.showLayerNumber(id);
+                break;
+            }
+            case 5: {
+                char filename[1024];
+                cout << "Enter file name: ";
+                cin >> filename;
+                dbms.saveData(filename);
+                break;
+            }
+            case 6: {
+                int id;
+                cout << "Enter ID: ";
+                cin >> id;
+                dbms.deleteEntry(id);
+                break;
+            }
+            case 7: {
+                int n;
+                cout << "Enter N: ";
+                cin >> n;
+                dbms.showNLayers(n);
+                break;
+            }
+            case 8: {
+                int id;
+                cout << "Enter ID: ";
+                cin >> id;
+                dbms.showPath(id);
+                break;
+            }
+            case 9: {
+                int id;
+                cout << "Enter ID: ";
+                cin >> id;
+                dbms.editEntry(id);
+                break;
+            }
+        }
+    } while (choice != 0);
+
+    return 0;
+}
